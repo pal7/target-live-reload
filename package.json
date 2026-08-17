@@ -22,7 +22,7 @@
     }
   },
   "bin": {
-    "target-reload": "./dist/cli.js"
+    "target-reload": "dist/cli.js"
   },
   "files": [
     "dist",
