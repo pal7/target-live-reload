@@ -1,6 +1,6 @@
 {
   "name": "@pal7/target-live-reload",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Build & QA Adobe Target experiences locally — inject your experience code into a live page and live-reload on save, no Target QA links.",
   "repository": {
     "type": "git",
