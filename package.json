@@ -1,7 +1,15 @@
 {
   "name": "@pal7/target-live-reload",
-  "version": "0.1.2",
+  "version": "0.1.1",
   "description": "Build & QA Adobe Target experiences locally — inject your experience code into a live page and live-reload on save, no Target QA links.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pal7/target-live-reload.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pal7/target-live-reload/issues"
+  },
+  "homepage": "https://github.com/pal7/target-live-reload#readme",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
