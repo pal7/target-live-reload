@@ -1,0 +1,28 @@
+<style>
+  /* Your experience CSS */
+  .my-hero-banner {
+    background: #0b5cff;
+    color: #fff;
+    padding: 24px;
+    border-radius: 8px;
+    font-family: system-ui, sans-serif;
+  }
+</style>
+
+<script>
+  // Your experience JS — same code you'd paste into a Target custom-code offer.
+  // __targetReload.waitForElement is provided by the tool for late-rendering DOM.
+  (function () {
+    window.__targetReload
+      .waitForElement("main, #main, .page-content")
+      .then(function (mount) {
+        var banner = document.createElement("div");
+        banner.className = "my-hero-banner";
+        banner.textContent = "Experience injected locally test 3 reload✔";
+        mount.prepend(banner);
+      })
+      .catch(function (err) {
+        console.warn("[experience]", err.message);
+      });
+  })();
+</script>

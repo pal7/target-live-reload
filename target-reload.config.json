@@ -1,0 +1,9 @@
+{
+  "url": "https://www-stage.agilent.com/",
+  "entry": "experiences/example/experience.html",
+  "browser": "chromium",
+  "injectTarget": "head",
+  "injectMode": "reload",
+  "isolate": false,
+  "debounce": 100
+}

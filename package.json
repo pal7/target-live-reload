@@ -1,0 +1,59 @@
+{
+  "name": "@pal7/target-live-reload",
+  "version": "0.1.2",
+  "description": "Build & QA Adobe Target experiences locally — inject your experience code into a live page and live-reload on save, no Target QA links.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "bin": {
+    "target-reload": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.map"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "adobe-target",
+    "target",
+    "playwright",
+    "live-reload",
+    "experience",
+    "ab-testing",
+    "personalization",
+    "dev-tool"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "chokidar": "^3.6.0"
+  },
+  "peerDependencies": {
+    "playwright": "^1.40.0"
+  },
+  "optionalDependencies": {
+    "esbuild": "^0.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "esbuild": "^0.21.0",
+    "playwright": "^1.62.1",
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0"
+  }
+}
