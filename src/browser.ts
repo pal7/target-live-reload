@@ -1,3 +1,4 @@
+import fs from "node:fs/promises";
 import path from "node:path";
 import {
   chromium,
@@ -34,11 +35,16 @@ export interface TargetBrowserOptions {
   isolate?: boolean;
   isolateBlocklist?: string[];
   injectTarget?: "head" | "body";
+  /** Log every failed request. Off by default (aborted tracker beacons are noise). */
+  verbose?: boolean;
+  /** Start logged-out with no cookies (profile dir is kept). Default: resume session. */
+  freshSession?: boolean;
 }
 
 export class TargetBrowser {
   private context?: BrowserContext;
   private page?: Page;
+  private lastHtml?: string;
   private readonly opts: Required<
     Pick<TargetBrowserOptions, "url" | "browser" | "headless" | "injectTarget">
   > &
@@ -58,6 +64,8 @@ export class TargetBrowser {
     const userDataDir =
       this.opts.userDataDir ?? path.resolve(process.cwd(), ".target-reload-profile");
 
+    await this.prepareProfile(userDataDir);
+
     // Persistent context: keeps you logged into staging between runs.
     this.context = await engine.launchPersistentContext(userDataDir, {
       channel: this.opts.channel,
@@ -66,6 +74,9 @@ export class TargetBrowser {
       httpCredentials: this.opts.httpCredentials,
       viewport: null,
     });
+
+    // Fresh visitor: drop all cookies (login, ECID, Target membership) but keep the profile.
+    if (this.opts.freshSession) await this.context.clearCookies();
 
     if (this.opts.isolate) await this.applyIsolation();
 
@@ -96,17 +107,59 @@ export class TargetBrowser {
 
     this.page = this.context.pages()[0] ?? (await this.context.newPage());
 
-    // Surface blocked/failed resources (bot protection, auth gates) in the terminal.
+    // Surface page-level problems (auth gates, bot protection). Subresource
+    // noise (the site's own 404s / cancelled beacons) only with verbose.
     this.page.on("response", (res) => {
-      if (res.status() >= 400) {
-        console.warn(`[target-reload] ${res.status()} ${res.url()}`);
-      }
+      if (res.status() < 400) return;
+      const isDocument = res.request().resourceType() === "document";
+      if (!this.opts.verbose && !isDocument) return;
+      console.warn(`[target-reload] ${res.status()} ${res.url()}`);
     });
     this.page.on("requestfailed", (req) => {
-      console.warn(`[target-reload] FAILED ${req.failure()?.errorText ?? "?"} ${req.url()}`);
+      const errorText = req.failure()?.errorText ?? "?";
+      const isDocument = req.resourceType() === "document";
+      if (!this.opts.verbose && !isDocument) return;
+      console.warn(`[target-reload] FAILED ${errorText} ${req.url()}`);
+    });
+
+    // Keep the experience injected across user-driven navigations
+    // (login redirects, clicked links). inject() is idempotent, so the
+    // extra fire on tool-driven reloads is harmless.
+    this.page.on("load", () => {
+      if (!this.lastHtml) return;
+      this.inject(this.lastHtml).catch(() => {
+        // Navigation raced the injection; the next load will retry.
+      });
     });
 
     await this.page.goto(this.opts.url, { waitUntil: "load" });
+  }
+
+  /**
+   * Chrome purges session cookies (SSO logins) on startup unless "continue where
+   * you left off" is set. Write that pref into the profile so logins survive
+   * CLI restarts, and mark the last exit clean to suppress the restore bubble.
+   */
+  private async prepareProfile(userDataDir: string): Promise<void> {
+    if (this.opts.browser !== "chromium") return;
+    try {
+      const prefsPath = path.join(userDataDir, "Default", "Preferences");
+      let prefs: Record<string, any> = {};
+      try {
+        prefs = JSON.parse(await fs.readFile(prefsPath, "utf8"));
+      } catch {
+        await fs.mkdir(path.dirname(prefsPath), { recursive: true });
+      }
+      prefs.session = {
+        ...prefs.session,
+        // Fresh session: let Chrome purge session cookies on startup as usual.
+        restore_on_startup: this.opts.freshSession ? 5 : 1,
+      };
+      prefs.profile = { ...prefs.profile, exit_type: "Normal" };
+      await fs.writeFile(prefsPath, JSON.stringify(prefs));
+    } catch {
+      // Non-fatal: worst case, session cookies don't survive a restart.
+    }
   }
 
   private async applyIsolation(): Promise<void> {
@@ -133,6 +186,7 @@ export class TargetBrowser {
    */
   async inject(html: string): Promise<void> {
     if (!this.page) return;
+    this.lastHtml = html;
     await this.page.evaluate(
       ({ html, target }) => {
         document.querySelectorAll("[data-target-reload]").forEach((n) => n.remove());

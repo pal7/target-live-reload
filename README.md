@@ -19,7 +19,10 @@ work:
 - **Re-executes injected scripts** — `innerHTML` won't run `<script>` tags; the
   injector re-creates them so your code actually fires.
 - **Persistent login** — log into staging once in the launched window; the session
-  survives reloads and restarts. Basic-auth gates are handled via env vars.
+  survives reloads and restarts. SSO session cookies (Okta/SAML) are preserved across
+  CLI restarts too. Basic-auth gates are handled via env vars.
+- **Stays injected while you browse** — your experience is re-injected on every
+  navigation (login redirects, clicked links), not just on file saves.
 - **Isolate mode** — optionally block the live page's own Target/Analytics so only
   your experience runs.
 
@@ -95,11 +98,16 @@ Never commit credentials — use env vars.
 | `--bundle`   | off                      | esbuild-bundle `.js`/`.ts`                   |
 | `--isolate`  | off                      | block Adobe edge/analytics                   |
 | `--profile`  | `.target-reload-profile` | persistent login profile                     |
+| `--fresh-session` | off                 | start logged-out: clear cookies at launch    |
+| `--verbose`  | off                      | also log aborted (tracker) requests          |
 | `--debounce` | `100`                    | batch window (ms)                            |
 
 **reload vs hot:** `reload` re-navigates then injects — a clean slate that mirrors a
 real page load (recommended). `hot` re-injects without navigating (faster, but your
 code should be idempotent since prior DOM/listeners persist).
+
+**Manual triggers:** while running, press `r` (reload + inject), `i` (inject only,
+e.g. after logging in or adding to cart), or `q` (quit).
 
 ## Programmatic API
 
@@ -117,10 +125,12 @@ const { browser, stop } = await targetReload({
 await stop();
 ```
 
-`targetReload(options)` resolves to `{ browser, stop }`. Full options: `url`,
+`targetReload(options)` resolves to `{ browser, reinject, stop }` —
+`reinject(mode?)` rebuilds and re-injects on demand. Full options: `url`,
 `entry` (string or string[]), `channel`, `browser`, `headless`, `watch`,
 `injectTarget` (`"head"|"body"`), `injectMode` (`"reload"|"hot"`), `bundle`,
-`isolate`, `isolateBlocklist`, `userDataDir`, `httpCredentials`, `debounce`.
+`isolate`, `isolateBlocklist`, `userDataDir`, `httpCredentials`, `verbose`,
+`freshSession`, `debounce`.
 
 Also exported: `TargetBrowser`, `buildExperience`, and the types `BrowserName`,
 `TargetReloadOptions`, `TargetReloadHandle`.

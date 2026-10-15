@@ -7,4 +7,5 @@ export default defineConfig({
   clean: true,
   sourcemap: true,
   target: "node18",
+  external: ["esbuild"], // optional dep — must stay a runtime import, not get bundled
 });

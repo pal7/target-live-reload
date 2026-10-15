@@ -42,7 +42,11 @@ Options:
   --bundle                               esbuild-bundle .js/.ts
   --isolate                              Block Adobe edge/analytics
   --profile    <dir>                     Persistent profile dir for logins
+  --fresh-session                        Start logged-out: clear cookies at launch
+  --verbose                              Log aborted requests too (off: tracker noise)
   --debounce   <ms>                      Batch window         (default: 100)
+
+Keys (while running):  r = reload+inject   i = inject only   q = quit
 
 Auth: set staging basic-auth via env  TARGET_USER  /  TARGET_PASS
 `);
@@ -81,9 +85,30 @@ targetReload({
   injectMode: (args.mode as "reload" | "hot") ?? fileConfig.injectMode,
   bundle: args.bundle ? true : fileConfig.bundle,
   isolate: args.isolate ? true : fileConfig.isolate,
+  verbose: args.verbose ? true : fileConfig.verbose,
+  freshSession: args["fresh-session"] ? true : fileConfig.freshSession,
   userDataDir: args.profile ? String(args.profile) : fileConfig.userDataDir,
   httpCredentials,
   debounce: args.debounce ? Number(args.debounce) : fileConfig.debounce,
+}).then(({ reinject, stop }) => {
+  if (!process.stdin.isTTY) return;
+  // Raw mode: single keypresses without Enter. Ctrl-C no longer raises SIGINT,
+  // so handle \u0003 explicitly.
+  process.stdin.setRawMode(true);
+  process.stdin.resume();
+  process.stdin.setEncoding("utf8");
+  console.log("[target-reload] keys: r = reload+inject, i = inject only, q = quit");
+  process.stdin.on("data", (key: string) => {
+    if (key === "r") {
+      console.log("[target-reload] manual reload+inject");
+      reinject("reload").catch((err) => console.error("[target-reload]", err.message));
+    } else if (key === "i") {
+      console.log("[target-reload] manual inject");
+      reinject("hot").catch((err) => console.error("[target-reload]", err.message));
+    } else if (key === "q" || key === "\u0003") {
+      stop().finally(() => process.exit(0));
+    }
+  });
 }).catch((err) => {
   console.error(err);
   process.exit(1);
