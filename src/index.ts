@@ -28,8 +28,9 @@ export interface TargetReloadOptions {
   freshSession?: boolean;
   /** Persistent profile dir so staging logins persist. */
   userDataDir?: string;
-  /** Basic-auth for gated staging pages. */
-  httpCredentials?: { username: string; password: string };
+  /** Basic-auth for gated staging pages. Sent only to the target URL's origin
+   *  unless `origin` overrides it. */
+  httpCredentials?: { username: string; password: string; origin?: string };
   debounce?: number;
 }
 

@@ -30,8 +30,9 @@ export interface TargetBrowserOptions {
   headless?: boolean;
   /** Persistent profile dir so staging logins survive reloads/restarts. */
   userDataDir?: string;
-  /** Basic-auth gate on staging (username/password). */
-  httpCredentials?: { username: string; password: string };
+  /** Basic-auth gate on staging. `origin` defaults to the target URL's origin
+   *  so credentials are never sent to third-party hosts. */
+  httpCredentials?: { username: string; password: string; origin?: string };
   isolate?: boolean;
   isolateBlocklist?: string[];
   injectTarget?: "head" | "body";
@@ -66,12 +67,18 @@ export class TargetBrowser {
 
     await this.prepareProfile(userDataDir);
 
+    // Scope basic-auth to the target origin: without `origin`, Playwright
+    // answers ANY host's 401 challenge with these credentials.
+    const httpCredentials = this.opts.httpCredentials
+      ? { origin: new URL(this.opts.url).origin, ...this.opts.httpCredentials }
+      : undefined;
+
     // Persistent context: keeps you logged into staging between runs.
     this.context = await engine.launchPersistentContext(userDataDir, {
       channel: this.opts.channel,
       headless: this.opts.headless,
       bypassCSP: true, // <-- without this, injected <script> is killed by CSP
-      httpCredentials: this.opts.httpCredentials,
+      httpCredentials,
       viewport: null,
     });
 
